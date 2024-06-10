@@ -14,7 +14,7 @@ class GDModel(nn.Module):
     def __init__(self, pretrained_model_name="resnet18", num_classes=3, freeze=True):
         super(GDModel, self).__init__()
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')  # Check for GPU availability
-        self.base_model = models.resnet18(pretrained=True)
+        self.base_model = models.resnet18(pretrained=True).to(self.device)
         self.loss_func = nn.CrossEntropyLoss()
         self.optimizer = optim.Adam(self.parameters(), lr=0.001)
         self.accuracy = Accuracy(task="multiclass", num_classes=3)
