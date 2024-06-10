@@ -46,6 +46,7 @@ class GDModel(nn.Module):
             print('-' * 10)
             self.train(True)
             epoch_loss = 0.0
+            preds_epoch = torch.tensor([])
             for num,(batchX,batchY) in enumerate(minibatch(Xtrain,Ytrain,batch_size=32)):
                 batchX = batchX.to(self.device)  
                 batchY = batchY.to(self.device)
@@ -56,7 +57,8 @@ class GDModel(nn.Module):
                 self.optimizer.step()
                 epoch_loss += loss.item()
                 y_preds = torch.argmax(outputs,dim=1)
-            epoch_acc = self.accuracy(y_preds, Ytrain)
+                preds_epoch = torch.cat([preds_epoch,y_preds], dim =0)
+            epoch_acc = self.accuracy(preds_epoch, Ytrain)
             t2 = time.time()
             epoch_train_time = t2 - t1
             # valid
