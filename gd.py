@@ -5,6 +5,7 @@ from torchvision import models
 import torch.optim as optim 
 from torchmetrics import Recall
 from torchmetrics import Accuracy
+import time
 best_model_params_path = "best_model.pth"
 
 
@@ -33,7 +34,7 @@ class GDModel(nn.Module):
         outputs = self(x)
         y_preds = torch.argmax(outputs,dim=1)
         return y_preds
-    def fitting(self,Xtrain,Ytrain, Xval,Yval ,num_epochs = 20):
+    def fitting(self,Xtrain,Ytrain, Xval,Yval,Xtest,Ytest ,num_epochs = 20):
         best_acc = 0.0
         t1 = time.time()
         Xtrain, Ytrain = shuffle(Xtrain,Ytrain)
