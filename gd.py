@@ -48,7 +48,7 @@ class GDModel(nn.Module):
             print('-' * 10)
             self.train(True)
             epoch_loss = 0.0
-            preds_epoch = torch.tensor([])
+            preds_epoch = torch.tensor([]).to(self.device)
             for num,(batchX,batchY) in enumerate(minibatch(Xtrain,Ytrain,batch_size=32)):
                 batchX = batchX.to(self.device)  
                 batchY = batchY.to(self.device)
