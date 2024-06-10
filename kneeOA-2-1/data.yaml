@@ -1,0 +1,13 @@
+names:
+- femur
+- tibia
+nc: 2
+roboflow:
+  license: CC BY 4.0
+  project: kneeoa-2
+  url: https://universe.roboflow.com/um-ajvmw/kneeoa-2/dataset/1
+  version: 1
+  workspace: um-ajvmw
+test: ../test/images
+train: kneeOA-2-1/train/images
+val: kneeOA-2-1/valid/images
