@@ -40,6 +40,8 @@ class GDModel(nn.Module):
         t1 = time.time()
         Xtrain, Ytrain = shuffle(Xtrain,Ytrain)
         Xval, Yval = shuffle(Xval,Yval)
+        Ytrain= Ytrain.to(self.device)
+        Yval = Yval.to(self.device)
         
         for epoch in range(num_epochs):
             print(f'Epoch {epoch}/{num_epochs - 1}')
@@ -58,6 +60,7 @@ class GDModel(nn.Module):
                 epoch_loss += loss.item()
                 y_preds = torch.argmax(outputs,dim=1)
                 preds_epoch = torch.cat([preds_epoch,y_preds], dim =0)
+            preds_epoch = preds_epoch.to(self.device)
             epoch_acc = self.accuracy(preds_epoch, Ytrain)
             t2 = time.time()
             epoch_train_time = t2 - t1
@@ -77,6 +80,7 @@ class GDModel(nn.Module):
     def evaluate_test(self,Xtest,Ytest):
         self.load_state_dict(torch.load(best_model_params_path))
         y_preds = self.predict(Xtest)
+        Ytest = Ytest.to(self.device)
         acc = self.accuracy(y_preds,Ytest)
         return acc
 
