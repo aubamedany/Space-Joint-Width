@@ -61,6 +61,7 @@ class GDModel(nn.Module):
                 y_preds = torch.argmax(outputs,dim=1)
                 preds_epoch = torch.cat([preds_epoch,y_preds], dim =0)
             preds_epoch = preds_epoch.to(self.device)
+            
             epoch_acc = self.accuracy(preds_epoch, Ytrain)
             t2 = time.time()
             epoch_train_time = t2 - t1

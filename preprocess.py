@@ -13,6 +13,29 @@ import matplotlib.pyplot as plt
 import collections
 import os
 import utils 
+import torch.nn as nn
+import torchvision
+
+
+def minibatch(*tensors, **kwargs):
+
+    batch_size = kwargs['batch_size']
+
+    if len(tensors) == 1:
+        tensor = tensors[0]
+        for i in range(0, len(tensor), batch_size):
+            yield tensor[i:i + batch_size]
+    else:
+        for i in range(0, len(tensors[0]), batch_size):
+            yield tuple(x[i:i + batch_size] for x in tensors)
+# Configuration settings
+class Config:
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    num_classes = 3
+    model = torchvision.models.resnet18(weights='IMAGENET1K_V1')
+    batch_size = 32
+    criterion = nn.CrossEntropyLoss()
+
 class Preprocess_yolo:
     def __init__(self,model_path = "best2.pt"):
         self.model = YOLO(model_path)
@@ -143,7 +166,12 @@ class Preprocess_yolo:
         # lower_right = get_unique_pixel(lower_right)
         # lower_left = get_unique_pixel(lower_left)
         return upper_left,upper_right,lower_left,lower_right
-    def visual_result(self,mask3ch,upper_left,upper_right,lower_left,lower_right):
+    def visual_result(self,img_path = "9003175L.png"):
+        with torch.no_grad():
+            results = self.model.predict(task="segment", source=img_path, conf=0.25, hide_labels=True, show_conf=False, save=False, augment=False, boxes=False) 
+        mask3ch,point,upper_point,lower_point   = self.preprocess_yolo(results)
+        x_min_upper,x_max_upper,x_min_lower,x_max_lower,x_min,x_max=self.get_4_contour_point( point,upper_point,lower_point)
+        upper_left,upper_right,lower_left,lower_right = self.get_4_set_point(upper_point,lower_point,x_min_upper,x_max_upper,x_min_lower,x_max_lower,x_min,x_max) 
         test = mask3ch.copy()
         for i in range(0,len(upper_left),3): 
             cv2.line(test,upper_left[i],lower_left[i],255,1)
@@ -157,7 +185,34 @@ class Preprocess_yolo:
         mask3ch,point,upper_point,lower_point   = self.preprocess_yolo(results)
         x_min_upper,x_max_upper,x_min_lower,x_max_lower,x_min,x_max=self.get_4_contour_point( point,upper_point,lower_point)
         upper_left,upper_right,lower_left,lower_right = self.get_4_set_point(upper_point,lower_point,x_min_upper,x_max_upper,x_min_lower,x_max_lower,x_min,x_max) 
-        return mask3ch,upper_left,upper_right,lower_left,lower_right
+        left,right =self.calculate_distance(upper_left,upper_right,lower_left,lower_right)
+        segment_left,segment_right = self.divide_2_10_segment(left,right)
+        result = self.jsw_processing(segment_left,segment_right)
+        return result
+    def calculate_distance(self,upper_left,upper_right,lower_left,lower_right):
+        right = np.array([abs(upper_right[i][1]-lower_right[i][1]) for i in range(len(upper_right))])
+        left = np.array([abs(upper_left[i][1]-lower_left[i][1]) for i in range(len(upper_left))])
+        return left,right 
+    def divide_2_10_segment(self,left,right):
+        idx_left = np.linspace(0,len(left)-1,num=11,dtype = int)
+        idx_right = np.linspace(0,len(right)-1,num=11,dtype = int)
+        segment_left =[]
+        segment_right = []
+        for i in range(9):
+            # segment_left.append(np.mean(idx_left[i:i+1]))
+            # segment_right.append(np.mean(idx_right[i:i+1]))
+            segment_left.append(np.mean(left[idx_left[i]:idx_left[i+1]]))
+            segment_right.append(np.mean(right[idx_right[i]:idx_right[i+1]]))
+        segment_left.append(np.mean(left[idx_left[9]:]))
+        segment_right.append(np.mean(right[idx_right[9]:]))
+        return np.array(segment_left),np.array(segment_right)
+    def jsw_processing(self,segment_left,segment_right):
+        jsw_max = np.max(np.concatenate((segment_left,segment_right)))
+        jsw_min = np.min(segment_left) if jsw_max in segment_right else np.min(segment_right)
+        jsw_mean = (abs(np.mean(segment_left)-np.mean(segment_right)))/jsw_max 
+        jsw_mm = (jsw_max - jsw_min )/jsw_max
+        return np.array([jsw_mean,jsw_mm])
+    
 
 
 class Preprocess_GD:
@@ -221,7 +276,30 @@ class Preprocess_GD:
         Yval = torch.tensor(np.array(Yval),dtype=torch.long)
 
         return Xtrain,Ytrain,Xtest,Ytest,Xval,Yval
-                    
+
+class Preprocess_RF:
+    def __init__(self):
+        self.config = Config()
+        self.model = self.config.model
+        self.model.fc = nn.Linear(self.model.fc.in_features, 3)
+        self.model.load_state_dict(torch.load("/Users/namle/Desktop/SegJSW/bestresnet.pt",map_location=torch.device('cpu')))
+
+        self.process_yolo = Preprocess_yolo()
+    def process(self,Xset):
+        result = torch.tensor([])
+        for (minibatch_num,(Xbatch)) in enumerate(minibatch(Xset,batch_size=32)):
+            resnet = self.model(Xbatch)
+            yolo = torch.tensor([])
+            for i in range(Xbatch.shape[0]):
+                res = torch.tensor(self.process_yolo.pipeline(Xbatch[i])).unsqueeze(0)
+                yolo = torch.concat((yolo,res),dim = 0)
+            resbatch = torch.concat((resnet,yolo),dim =-1)
+            result = torch.concat((result,resbatch),dim=0)
+        return result 
+
+                
+
+
 
 
             
