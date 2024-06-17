@@ -282,7 +282,7 @@ class Preprocess_RF:
         self.config = Config()
         self.model = self.config.model
         self.model.fc = nn.Linear(self.model.fc.in_features, 3)
-        self.model.load_state_dict(torch.load("/Users/namle/Desktop/SegJSW/bestresnet.pt",map_location=torch.device('cpu')))
+        self.model.load_state_dict(torch.load("bestresnet.pt",map_location=torch.device('cpu')))
 
         self.process_yolo = Preprocess_yolo()
     def process(self,Xset):
